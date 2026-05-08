@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>TikTok Post Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { font-size: 16px; }
+  body {
+    min-height: 100vh; min-height: 100dvh;
+    background: #080808; font-family: Georgia, serif;
+    color: #F0EDE6; padding: 24px 16px env(safe-area-inset-bottom);
+    display: flex; flex-direction: column; align-items: center;
+    -webkit-font-smoothing: antialiased;
+  }
+  .header { text-align: center; margin-bottom: 22px; padding-top: env(safe-area-inset-top); }
+  .eyebrow { font-size: 10px; letter-spacing: 5px; color: #C8A96E; font-family: sans-serif; margin-bottom: 6px; }
+  h1 { font-size: clamp(22px, 6vw, 36px); margin: 0; font-weight: 700; }
+  .sub { color: #555; font-family: sans-serif; font-size: 12px; margin-top: 8px; }
+  .divider { width: 36px; height: 2px; background: #C8A96E; margin: 12px auto 0; }
+
+  .controls { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+
+  .key-input {
+    width: 100%; background: #111; border: 1px solid #2A2A2A;
+    color: #F0EDE6; border-radius: 10px; padding: 14px 16px;
+    font-size: 16px; font-family: monospace; outline: none;
+    -webkit-appearance: none;
+  }
+  .key-input:focus { border-color: #C8A96E; }
+  .key-help { color: #555; font-size: 11px; font-family: sans-serif; text-align: center; line-height: 1.5; padding: 0 8px; }
+  .key-help a { color: #C8A96E; text-decoration: none; }
+
+  .mode-tabs {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px; background: #0D0D0D;
+    border: 1px solid #1E1E1E; border-radius: 10px; padding: 6px;
+  }
+  .mode-tab {
+    padding: 10px 6px; font-size: 11px; font-family: sans-serif;
+    background: transparent; color: #777; border: none;
+    border-radius: 6px; cursor: pointer; font-weight: 700;
+    letter-spacing: 0.5px; transition: all 0.2s; line-height: 1.3;
+  }
+  .mode-tab.active { background: #C8A96E; color: #000; }
+  .mode-tab .icon { font-size: 14px; display: block; margin-bottom: 2px; }
+
+  .selector-block {
+    background: #0D0D0D; border: 1px solid #1E1E1E;
+    border-radius: 10px; padding: 12px;
+  }
+  .selector-label {
+    font-size: 9px; letter-spacing: 3px; color: #555;
+    font-family: sans-serif; margin-bottom: 8px;
+  }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    background: #181818; color: #888;
+    border: 1px solid #252525;
+    border-radius: 16px; padding: 7px 13px;
+    font-size: 12px; font-family: sans-serif;
+    cursor: pointer; font-weight: 600;
+    min-height: 32px; transition: all 0.15s;
+  }
+  .pill.active { background: #C8A96E; color: #000; border-color: #C8A96E; }
+  .pill:active { transform: scale(0.96); }
+
+  .btn-primary {
+    background: #C8A96E; color: #000; border: none;
+    border-radius: 10px; padding: 18px; font-size: 14px;
+    font-weight: 700; font-family: sans-serif; letter-spacing: 2px;
+    cursor: pointer; text-transform: uppercase; margin: 14px 0 24px;
+    width: 100%; max-width: 560px; min-height: 56px;
+  }
+  .btn-primary:disabled { background: #181818; color: #444; cursor: not-allowed; }
+  .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+
+  .error {
+    background: #1A0808; border: 1px solid #C86E6E55;
+    border-radius: 10px; padding: 14px 16px;
+    max-width: 560px; width: 100%; margin-bottom: 12px;
+    font-family: sans-serif; font-size: 13px; color: #C86E6E; line-height: 1.6;
+  }
+  .debug-btn {
+    background: transparent; border: 1px solid #C86E6E55;
+    color: #C86E6E; border-radius: 4px; padding: 5px 10px;
+    font-size: 11px; font-family: sans-serif; cursor: pointer;
+    letter-spacing: 1px; margin-top: 8px;
+  }
+  .debug-pane {
+    background: #000; color: #888; padding: 12px;
+    border-radius: 6px; margin-top: 10px; font-size: 10px;
+    font-family: monospace; white-space: pre-wrap;
+    word-break: break-word; max-height: 250px; overflow: auto;
+  }
+
+  .output { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 12px; }
+  .meme {
+    background: #000; border-radius: 12px;
+    border: 1px solid var(--accent, #C8A96E)30;
+    position: relative; overflow: hidden;
+  }
+  .meme-inner {
+    padding: 44px 24px 32px; min-height: 240px;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center; gap: 16px;
+  }
+  .meme-quote {
+    font-size: clamp(16px, 4.5vw, 22px); line-height: 1.65;
+    text-align: center; font-style: italic;
+    color: #fff; font-weight: 700;
+  }
+  .meme-attribution {
+    font-size: 11px; color: #888;
+    font-family: sans-serif; font-style: italic;
+    text-align: center;
+  }
+  .meme-label {
+    font-size: 10px; letter-spacing: 4px;
+    color: var(--accent, #C8A96E); font-family: sans-serif; font-weight: 700;
+  }
+  .save-btn {
+    position: absolute; top: 12px; right: 12px;
+    background: #000C; border: 1px solid var(--accent, #C8A96E)55;
+    color: var(--accent, #C8A96E); border-radius: 6px;
+    padding: 8px 14px; font-size: 11px; font-family: sans-serif;
+    letter-spacing: 1px; cursor: pointer; font-weight: 700;
+    min-height: 32px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .card { background: #111; border-radius: 10px; border: 1px solid #1E1E1E; padding: 13px; }
+  .card-label {
+    font-size: 9px; letter-spacing: 3px;
+    color: var(--accent, #C8A96E); font-family: sans-serif; margin-bottom: 8px;
+  }
+  .card-pill {
+    display: inline-block;
+    background: var(--accent-bg, #C8A96E20);
+    border: 1px solid var(--accent, #C8A96E);
+    color: var(--accent, #C8A96E);
+    border-radius: 20px; padding: 4px 11px;
+    font-size: 11px; font-family: sans-serif; font-weight: 700;
+  }
+  .audio-text { font-size: 11px; font-family: sans-serif; color: #999; line-height: 1.5; }
+
+  .caption-card { background: #111; border-radius: 10px; border: 1px solid #1E1E1E; padding: 16px; }
+  .caption-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .copy-btn {
+    background: #1A1A1A; color: #777; border: none;
+    border-radius: 6px; padding: 8px 14px; font-size: 11px;
+    font-family: sans-serif; cursor: pointer; font-weight: 700;
+    letter-spacing: 1px; min-height: 32px;
+  }
+  .copy-btn.copied { background: var(--accent, #C8A96E); color: #000; }
+  .caption-text { font-size: 13px; font-family: sans-serif; color: #B0B0B0; line-height: 1.65; margin-bottom: 12px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    background: #1A1A1A; color: var(--accent, #C8A96E);
+    font-size: 11px; padding: 5px 10px; border-radius: 20px;
+    font-family: sans-serif; border: 1px solid var(--accent, #C8A96E)30;
+  }
+
+  .download-btn {
+    background: transparent; border: 1px solid var(--accent, #C8A96E);
+    color: var(--accent, #C8A96E); border-radius: 10px; padding: 16px;
+    font-size: 12px; font-weight: 700; font-family: sans-serif;
+    letter-spacing: 2px; cursor: pointer; text-transform: uppercase;
+    width: 100%; min-height: 52px;
+  }
+  .download-btn:active { transform: scale(0.98); }
+  .footer-note { color: #2A2A2A; font-size: 11px; font-family: sans-serif; text-align: center; }
+
+  .empty {
+    border: 1px dashed #1E1E1E; border-radius: 12px;
+    width: 100%; max-width: 560px; height: 240px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px; color: #2A2A2A;
+  }
+  .empty-icon { font-size: 32px; }
+  .empty-text { font-family: sans-serif; font-size: 11px; letter-spacing: 3px; padding: 0 12px; text-align: center; }
+
+  .history-bar {
+    width: 100%; max-width: 560px; margin-top: 16px;
+    padding: 10px 14px; background: #0D0D0D;
+    border: 1px solid #1A1A1A; border-radius: 8px;
+    font-family: sans-serif; font-size: 11px; color: #555;
+  }
+  .history-bar strong { color: #C8A96E; }
+  .clear-btn {
+    background: none; border: none; color: #555;
+    font-size: 11px; cursor: pointer; text-decoration: underline;
+    font-family: sans-serif; padding: 4px;
+  }
+
+  .hidden { display: none !important; }
+
+  /* iPhone tweaks */
+  @media (max-width: 480px) {
+    body { padding: 16px 12px env(safe-area-inset-bottom); }
+    .header { margin-bottom: 16px; }
+    .meme-inner { padding: 36px 20px 28px; min-height: 200px; }
+    .save-btn { padding: 6px 10px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas" class="hidden"></canvas>
+
+<div class="header">
+  <div class="eyebrow">AI-POWERED</div>
+  <h1>TikTok Post Generator</h1>
+  <p class="sub">Real-talk · Wisdom · Philosophy</p>
+  <div class="divider"></div>
+</div>
+
+<div class="controls">
+  <input type="password" id="apiKey" class="key-input" placeholder="Anthropic API key (sk-ant-...)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="original">
+      <span class="icon">🎯</span>Original<br>Style
+    </button>
+    <button class="mode-tab" data-mode="verified">
+      <span class="icon">📜</span>Verified<br>Wisdom
+    </button>
+    <button class="mode-tab" data-mode="spirit">
+      <span class="icon">✍️</span>In Spirit<br>Of
+    </button>
+  </div>
+
+  <!-- Original mode controls -->
+  <div id="originalControls" class="selector-block">
+    <div class="selector-label">THEME</div>
+    <div class="pill-row" id="themeRow"></div>
+  </div>
+
+  <!-- Verified mode controls -->
+  <div id="verifiedControls" class="selector-block hidden">
+    <div class="selector-label">SOURCE</div>
+    <div class="pill-row" id="sourceRow"></div>
+  </div>
+
+  <!-- Spirit mode controls -->
+  <div id="spiritControls" class="selector-block hidden">
+    <div class="selector-label">PHILOSOPHER</div>
+    <div class="pill-row" id="philosopherRow"></div>
+  </div>
+</div>
+
+<p class="key-help">
+  Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a> · Stored on this device only
+</p>
+
+<button id="generateBtn" class="btn-primary">✦  Generate Today's Post</button>
+
+<div id="errorBox" class="error hidden">
+  <div id="errorText"></div>
+  <button id="debugBtn" class="debug-btn hidden">Show Debug Info</button>
+  <pre id="debugPane" class="debug-pane hidden"></pre>
+</div>
+
+<div id="emptyState" class="empty">
+  <div class="empty-icon">✦</div>
+  <div class="empty-text">YOUR POST WILL APPEAR HERE</div>
+</div>
+
+<div id="output" class="output hidden">
+  <div id="meme" class="meme">
+    <div class="meme-inner">
+      <p class="meme-quote" id="quoteText"></p>
+      <p class="meme-attribution hidden" id="attributionText"></p>
+      <span class="meme-label" id="labelText"></span>
+    </div>
+    <button class="save-btn" onclick="downloadImage()">↓ SAVE</button>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-label" id="metaLabel">CATEGORY</div>
+      <span class="card-pill" id="themeText"></span>
+    </div>
+    <div class="card">
+      <div class="card-label">🎵 AUDIO</div>
+      <div class="audio-text" id="audioText"></div>
+    </div>
+  </div>
+
+  <div class="caption-card">
+    <div class="caption-row">
+      <div class="card-label" style="margin: 0;">CAPTION + HASHTAGS</div>
+      <button class="copy-btn" id="copyBtn" onclick="copyCaption()">COPY</button>
+    </div>
+    <p class="caption-text" id="captionText"></p>
+    <div class="tags" id="tagsRow"></div>
+  </div>
+
+  <button class="download-btn" onclick="downloadImage()">↓ Download 1080×1080 (PNG)</button>
+  <p class="footer-note">Full resolution · Ready for TikTok & Instagram</p>
+</div>
+
+<div class="history-bar">
+  <strong>Recent:</strong> <span id="historyText">none yet</span>
+  <button class="clear-btn" id="clearHistoryBtn">clear</button>
+</div>
+
+<script>
+// ========================================
+// THEMES (for Original mode)
+// ========================================
+const THEMES = {
+  "Self-Worth": {
+    color: "#C8A96E",
+    audio: "T-Pain - Can't Believe It (Instrumental)",
+    hashtags: ["#KnowYourWorth", "#SelfWorth", "#StandTall", "#Confidence"],
+    examples: [
+      "You stopped begging for what should've been freely given. That's growth.",
+      "Lower your tolerance for nonsense. Raise your standards for love.",
+      "Some people will only value you when they realize they can't replace you."
+    ],
+    focus: "personal value, standards, refusing to be undervalued"
+  },
+  "Boundaries": {
+    color: "#C86E6E",
+    audio: "Mobb Deep - Hell on Earth (Instrumental)",
+    hashtags: ["#Boundaries", "#NoMore", "#ProtectYourPeace", "#SayNo"],
+    examples: [
+      "No is a complete sentence. Stop explaining yourself to people who never wanted to understand.",
+      "If saying no makes them mad, they were only happy when you said yes.",
+      "Cutting people off ain't always cold. Sometimes it's just necessary."
+    ],
+    focus: "saying no, cutting people off, refusing to over-explain"
+  },
+  "Faith": {
+    color: "#D4A847",
+    audio: "Sia - Unstoppable (Piano Instrumental)",
+    hashtags: ["#Faith", "#Blessed", "#GodsTiming", "#Trust"],
+    examples: [
+      "What's for you won't pass you. Stop forcing what God's already telling you to release.",
+      "Sometimes the delay is the protection. Trust the wait.",
+      "Pray about it then move like the prayer was already answered."
+    ],
+    focus: "trusting God's timing, divine protection, prayer in action"
+  },
+  "Solitude": {
+    color: "#7EB8A4",
+    audio: "Marvin Gaye - Trouble Man (Instrumental)",
+    hashtags: ["#Solitude", "#AloneTime", "#PeaceOfMind", "#InnerPeace"],
+    examples: [
+      "Alone hits different when you used to settle for company that drained you.",
+      "Being by yourself is not the same as being lonely. Learn the difference.",
+      "Some of your best growth happens in rooms nobody else gets invited to."
+    ],
+    focus: "being alone, peace in solitude, choosing yourself"
+  },
+  "Discipline": {
+    color: "#8E7EB8",
+    audio: "Drake - Fake Love (Instrumental)",
+    hashtags: ["#Discipline", "#StayFocused", "#NoExcuses", "#Consistency"],
+    examples: [
+      "Discipline don't wait for motivation. It shows up either way.",
+      "You wanted change but kept doing the same thing. That's why you're still here.",
+      "Stop talking about what you're gonna do. Just go do it. Quietly."
+    ],
+    focus: "consistency, doing the work, ignoring motivation"
+  },
+  "Healing": {
+    color: "#6E9EC8",
+    audio: "Chilled Pig - Golden Hour (Piano Instrumental)",
+    hashtags: ["#Healing", "#TherapyJourney", "#MentalHealth", "#Recovery"],
+    examples: [
+      "Healing don't always feel good. Sometimes it feels like rage you finally let yourself feel.",
+      "You can't keep watering people who poisoned the soil.",
+      "Forgiving them was for you. Going back would be against you."
+    ],
+    focus: "emotional healing, processing pain, breaking cycles"
+  },
+  "Money & Hustle": {
+    color: "#A8B86E",
+    audio: "T-Pain - Can't Believe It (Instrumental)",
+    hashtags: ["#MoneyMoves", "#Hustle", "#StackYourBag", "#GetIt"],
+    examples: [
+      "Broke energy talks. Wealthy energy moves in silence.",
+      "Stop posting it. Start building it.",
+      "If your hustle ain't paying you yet, it's not done teaching you."
+    ],
+    focus: "money, hustle, building wealth quietly"
+  },
+  "Forgiveness": {
+    color: "#B86E9E",
+    audio: "Marvin Gaye - Trouble Man (Instrumental)",
+    hashtags: ["#Forgiveness", "#LetItGo", "#MoveOn", "#Closure"],
+    examples: [
+      "Forgiveness ain't a gift to them. It's a gift to yourself.",
+      "Closure is overrated. Sometimes you just gotta close the door yourself.",
+      "Holding onto that grudge is rent you keep paying for a place you don't even live in anymore."
+    ],
+    focus: "letting go, releasing resentment, closure without their cooperation"
+  }
+};
+
+// ========================================
+// VERIFIED QUOTES (real, sourced quotes)
+// ========================================
+const VERIFIED_QUOTES = {
+  "Stoics": {
+    color: "#C8A96E",
+    audio: "Marvin Gaye - Trouble Man (Instrumental)",
+    hashtags: ["#Stoicism", "#StoicWisdom", "#Philosophy", "#MarcusAurelius", "#Seneca"],
+    quotes: [
+      { text: "You have power over your mind — not outside events. Realize this, and you will find strength.", author: "Marcus Aurelius" },
+      { text: "Waste no more time arguing what a good man should be. Be one.", author: "Marcus Aurelius" },
+      { text: "The happiness of your life depends upon the quality of your thoughts.", author: "Marcus Aurelius" },
+      { text: "If it is not right, do not do it. If it is not true, do not say it.", author: "Marcus Aurelius" },
+      { text: "We suffer more often in imagination than in reality.", author: "Seneca" },
+      { text: "It is not the man who has too little, but the man who craves more, that is poor.", author: "Seneca" },
+      { text: "Difficulties strengthen the mind, as labor does the body.", author: "Seneca" },
+      { text: "We are more often frightened than hurt; and we suffer more from imagination than from reality.", author: "Seneca" },
+      { text: "It's not what happens to you, but how you react to it that matters.", author: "Epictetus" },
+      { text: "Wealth consists not in having great possessions, but in having few wants.", author: "Epictetus" },
+      { text: "He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has.", author: "Epictetus" }
+    ]
+  },
+  "Black Voices": {
+    color: "#C86E6E",
+    audio: "Marvin Gaye - Trouble Man (Instrumental)",
+    hashtags: ["#JamesBaldwin", "#AudreLorde", "#ToniMorrison", "#BlackWisdom", "#CivilRights"],
+    quotes: [
+      { text: "Not everything that is faced can be changed, but nothing can be changed until it is faced.", author: "James Baldwin" },
+      { text: "The most dangerous creation of any society is the man who has nothing to lose.", author: "James Baldwin" },
+      { text: "I imagine one of the reasons people cling to their hates so stubbornly is because they sense, once hate is gone, they will be forced to deal with pain.", author: "James Baldwin" },
+      { text: "Your silence will not protect you.", author: "Audre Lorde" },
+      { text: "Caring for myself is not self-indulgence, it is self-preservation.", author: "Audre Lorde" },
+      { text: "When I dare to be powerful, to use my strength in the service of my vision, then it becomes less and less important whether I am afraid.", author: "Audre Lorde" },
+      { text: "If you wanna fly, you got to give up the shit that weighs you down.", author: "Toni Morrison" },
+      { text: "You are your best thing.", author: "Toni Morrison" },
+      { text: "Definitions belong to the definers, not the defined.", author: "Toni Morrison" },
+      { text: "When someone shows you who they are, believe them the first time.", author: "Maya Angelou" },
+      { text: "I can be changed by what happens to me. But I refuse to be reduced by it.", author: "Maya Angelou" },
+      { text: "Without a struggle, there can be no progress.", author: "Frederick Douglass" }
+    ]
+  },
+  "Modern Thinkers": {
+    color: "#7EB8A4",
+    audio: "Sia - Unstoppable (Piano Instrumental)",
+    hashtags: ["#ViktorFrankl", "#AlanWatts", "#Krishnamurti", "#Wisdom", "#Philosophy"],
+    quotes: [
+      { text: "When we are no longer able to change a situation, we are challenged to change ourselves.", author: "Viktor Frankl" },
+      { text: "Between stimulus and response there is a space. In that space is our power to choose our response.", author: "Viktor Frankl" },
+      { text: "Those who have a 'why' to live, can bear with almost any 'how'.", author: "Viktor Frankl" },
+      { text: "The only way to make sense out of change is to plunge into it, move with it, and join the dance.", author: "Alan Watts" },
+      { text: "It is no measure of health to be well adjusted to a profoundly sick society.", author: "Jiddu Krishnamurti" },
+      { text: "The function of art is to do more than tell it like it is — it's to imagine what is possible.", author: "bell hooks" },
+      { text: "He who has a why to live for can bear almost any how.", author: "Friedrich Nietzsche" },
+      { text: "That which does not kill us makes us stronger.", author: "Friedrich Nietzsche" }
+    ]
+  },
+  "Eastern Wisdom": {
+    color: "#D4A847",
+    audio: "Chilled Pig - Golden Hour (Piano Instrumental)",
+    hashtags: ["#LaoTzu", "#Rumi", "#Zen", "#EasternWisdom", "#Tao"],
+    quotes: [
+      { text: "When I let go of what I am, I become what I might be.", author: "Lao Tzu" },
+      { text: "Mastering others is strength. Mastering yourself is true power.", author: "Lao Tzu" },
+      { text: "A journey of a thousand miles begins with a single step.", author: "Lao Tzu" },
+      { text: "Knowing others is intelligence; knowing yourself is true wisdom.", author: "Lao Tzu" },
+      { text: "The wound is the place where the Light enters you.", author: "Rumi" },
+      { text: "What you seek is seeking you.", author: "Rumi" },
+      { text: "Yesterday I was clever, so I wanted to change the world. Today I am wise, so I am changing myself.", author: "Rumi" }
+    ]
+  }
+};
+
+// ========================================
+// PHILOSOPHERS (for "In Spirit Of" mode)
+// ========================================
+const PHILOSOPHERS = {
+  "Marcus Aurelius": {
+    color: "#C8A96E",
+    style: "Stoic emperor. Reflective, austere, focused on duty, mortality, and inner discipline. Speaks like writing in a private journal at the end of a long day.",
+    themes: "control over mind, accepting fate, virtue, mortality, the present moment",
+    audio: "Marvin Gaye - Trouble Man (Instrumental)"
+  },
+  "Seneca": {
+    color: "#B89656",
+    style: "Roman senator and Stoic. Sharper, more rhetorical than Marcus. Cuts through illusions about wealth, time, and false comfort.",
+    themes: "time wasted, false friends, real wealth, fear vs reality, preparing for hardship",
+    audio: "Marvin Gaye - Trouble Man (Instrumental)"
+  },
+  "Epictetus": {
+    color: "#A8864E",
+    style: "Former slave turned Stoic teacher. Direct, stern, no-nonsense. Forces you to face what's actually in your control.",
+    themes: "control vs no-control, freedom from desire, mental discipline, judgment",
+    audio: "Mobb Deep - Hell on Earth (Instrumental)"
+  },
+  "James Baldwin": {
+    color: "#C86E6E",
+    style: "Sharp, lyrical, unflinching. Sees through pretense. About facing truth, identity, and the moral cost of avoidance.",
+    themes: "facing truth, identity, hate as fear of pain, courage to be seen",
+    audio: "Marvin Gaye - Trouble Man (Instrumental)"
+  },
+  "Audre Lorde": {
+    color: "#B86E9E",
+    style: "Poet, warrior. Fierce clarity. Self-care as resistance. About power, silence, anger as fuel.",
+    themes: "silence vs speech, self-preservation, anger as power, identity",
+    audio: "Sia - Unstoppable (Piano Instrumental)"
+  },
+  "Toni Morrison": {
+    color: "#9E6EB8",
+    style: "Lyrical, deep, with a soul. About self-definition, freeing yourself from the gaze of others, weight of history.",
+    themes: "self-definition, releasing burden, being your own best thing",
+    audio: "Marvin Gaye - Trouble Man (Instrumental)"
+  },
+  "Viktor Frankl": {
+    color: "#7EB8A4",
+    style: "Holocaust survivor turned psychiatrist. Quiet authority. About finding meaning in suffering, the space between stimulus and response.",
+    themes: "meaning in suffering, choice, why-to-live, response over reaction",
+    audio: "Sia - Unstoppable (Piano Instrumental)"
+  },
+  "Lao Tzu": {
+    color: "#D4A847",
+    style: "Taoist sage. Paradoxical, soft-yet-sharp. About strength in yielding, mastering self over others, returning to source.",
+    themes: "letting go, soft strength, simplicity, knowing self",
+    audio: "Chilled Pig - Golden Hour (Piano Instrumental)"
+  },
+  "Rumi": {
+    color: "#E0B070",
+    style: "Sufi mystic poet. Lyrical, spiritual, about love as fire, wounds as openings, longing as the path itself.",
+    themes: "the wound as light entry, longing, what seeks you, divine love",
+    audio: "Chilled Pig - Golden Hour (Piano Instrumental)"
+  },
+  "Nietzsche": {
+    color: "#8E7EB8",
+    style: "Provocative philosopher. Hammers idols. About self-overcoming, finding your own way, strength through suffering.",
+    themes: "self-overcoming, your own path, strength through suffering, beyond convention",
+    audio: "Mobb Deep - Hell on Earth (Instrumental)"
+  }
+};
+
+// ========================================
+// STATE
+// ========================================
+const STORAGE_KEY = "tiktok_gen_history_v2";
+const MAX_HISTORY = 5;
+let mode = "original";
+let selectedTheme = "auto";
+let selectedSource = "auto";
+let selectedPhilosopher = "auto";
+let currentPost = null;
+
+const $ = (id) => document.getElementById(id);
+
+// History
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveToHistory(label, quote) {
+  const h = getHistory();
+  h.unshift({ label, quote, ts: Date.now() });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(0, MAX_HISTORY)));
+  renderHistory();
+}
+function renderHistory() {
+  const h = getHistory();
+  $("historyText").textContent = h.length ? h.map(x => x.label).join(" → ") : "none yet";
+}
+$("clearHistoryBtn").addEventListener("click", () => {
+  localStorage.removeItem(STORAGE_KEY);
+  renderHistory();
+});
+
+// API key persistence
+const saved = sessionStorage.getItem("anthropic_key");
+if (saved) $("apiKey").value = saved;
+$("apiKey").addEventListener("input", (e) => {
+  sessionStorage.setItem("anthropic_key", e.target.value);
+});
+
+// ========================================
+// RENDER PILLS
+// ========================================
+function renderPills(rowId, items, selectedVal, onSelect) {
+  const row = $(rowId);
+  row.innerHTML = "";
+
+  const auto = document.createElement("button");
+  auto.className = "pill" + (selectedVal === "auto" ? " active" : "");
+  auto.textContent = "✨ Surprise me";
+  auto.onclick = () => onSelect("auto");
+  row.appendChild(auto);
+
+  items.forEach(name => {
+    const btn = document.createElement("button");
+    btn.className = "pill" + (selectedVal === name ? " active" : "");
+    btn.textContent = name;
+    btn.onclick = () => onSelect(name);
+    row.appendChild(btn);
+  });
+}
+
+function refreshAllPills() {
+  renderPills("themeRow", Object.keys(THEMES), selectedTheme,
+    (v) => { selectedTheme = v; refreshAllPills(); });
+  renderPills("sourceRow", Object.keys(VERIFIED_QUOTES), selectedSource,
+    (v) => { selectedSource = v; refreshAllPills(); });
+  renderPills("philosopherRow", Object.keys(PHILOSOPHERS), selectedPhilosopher,
+    (v) => { selectedPhilosopher = v; refreshAllPills(); });
+}
+refreshAllPills();
+renderHistory();
+
+// Mode tabs
+document.querySelectorAll(".mode-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    mode = tab.dataset.mode;
+    document.querySelectorAll(".mode-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    $("originalControls").classList.toggle("hidden", mode !== "original");
+    $("verifiedControls").classList.toggle("hidden", mode !== "verified");
+    $("spiritControls").classList.toggle("hidden", mode !== "spirit");
+  });
+});
+
+// ========================================
+// HELPERS
+// ========================================
+function setAccent(color) {
+  document.documentElement.style.setProperty("--accent", color);
+  document.documentElement.style.setProperty("--accent-bg", color + "20");
+}
+function showError(msg, debug) {
+  $("errorBox").classList.remove("hidden");
+  $("errorText").innerHTML = "<strong>⚠ Error:</strong> " + msg;
+  if (debug) {
+    $("debugBtn").classList.remove("hidden");
+    $("debugPane").textContent = JSON.stringify(debug, null, 2);
+  }
+}
+function clearError() {
+  $("errorBox").classList.add("hidden");
+  $("debugPane").classList.add("hidden");
+}
+$("debugBtn").addEventListener("click", () => {
+  $("debugPane").classList.toggle("hidden");
+  $("debugBtn").textContent = $("debugPane").classList.contains("hidden") ? "Show Debug Info" : "Hide Debug Info";
+});
+
+function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pickAvoidingRecent(arr, recentLabels) {
+  const available = arr.filter(x => !recentLabels.includes(x));
+  return pickRandom(available.length > 0 ? available : arr);
+}
+
+// ========================================
+// GENERATORS BY MODE
+// ========================================
+async function generate() {
+  clearError();
+  const btn = $("generateBtn");
+  btn.disabled = true;
+  let dotCount = 0;
+  const dotInterval = setInterval(() => {
+    dotCount = (dotCount + 1) % 4;
+    btn.textContent = "Generating" + ".".repeat(dotCount);
+  }, 450);
+
+  try {
+    let post;
+    if (mode === "verified") {
+      post = generateVerified();
+    } else {
+      // original or spirit modes need API
+      const apiKey = $("apiKey").value.trim();
+      if (!apiKey) throw { message: "Please paste your Anthropic API key first." };
+      if (mode === "original") post = await generateOriginal(apiKey);
+      else if (mode === "spirit") post = await generateSpirit(apiKey);
+    }
+    currentPost = post;
+    saveToHistory(post.label || post.theme, post.quote);
+    renderPost(post);
+  } catch (e) {
+    showError(e.message || "Unknown error", e.debug);
+  } finally {
+    clearInterval(dotInterval);
+    btn.disabled = false;
+    btn.textContent = currentPost ? "⟳  Generate New Post" : "✦  Generate Today's Post";
+  }
+}
+
+function generateVerified() {
+  const sourceName = selectedSource === "auto"
+    ? pickAvoidingRecent(Object.keys(VERIFIED_QUOTES), getHistory().slice(0, 2).map(h => h.label))
+    : selectedSource;
+  const source = VERIFIED_QUOTES[sourceName];
+  const recentQuoteTexts = getHistory().map(h => h.quote);
+  const available = source.quotes.filter(q => !recentQuoteTexts.includes(q.text));
+  const pick = pickRandom(available.length > 0 ? available : source.quotes);
+
+  return {
+    quote: pick.text,
+    attribution: pick.author,
+    label: sourceName.toUpperCase(),
+    theme: sourceName,
+    color: source.color,
+    audio: source.audio,
+    hashtags: source.hashtags,
+    caption: `Wisdom from ${pick.author}. Sometimes the old voices say what we need to hear.`
+  };
+}
+
+async function generateOriginal(apiKey) {
+  const themeName = selectedTheme === "auto"
+    ? pickAvoidingRecent(Object.keys(THEMES), getHistory().slice(0, 3).map(h => h.label))
+    : selectedTheme;
+  const theme = THEMES[themeName];
+  const recentQuotes = getHistory().map(h => h.quote);
+
+  const examples = theme.examples.map(e => `- "${e}"`).join("\n");
+  const recentBlock = recentQuotes.length > 0
+    ? `\nDO NOT repeat the structure or wording of these recent quotes:\n${recentQuotes.map(q => `- "${q}"`).join("\n")}\n`
+    : "";
+
+  const userPrompt = `Write a single original motivational quote for a TikTok post.
+
+THEME: ${themeName}
+FOCUS: ${theme.focus}
+
+STYLE:
+- Real-talk wisdom — street-smart, grounded, conversational
+- Slightly spiritual but never preachy
+- Short, 3-second read
+- Uses natural speech (contractions, "ain't", "gotta" are fine)
+
+EXAMPLES (match energy, don't copy):
+${examples}
+${recentBlock}
+FORBIDDEN: Don't start with "Your growth..." or "Your healing...". Don't use "...and that's not X, that's Y" structure. Don't start with "People who...". Avoid generic phrases.
+
+Respond with ONLY a JSON object (no markdown, no backticks):
+{"quote":"the quote","label":"2-3 WORD LABEL","caption":"1-2 sentence caption that adds context"}`;
+
+  const data = await callClaude(apiKey, userPrompt, 1.0);
+  return {
+    quote: data.quote,
+    label: data.label,
+    theme: themeName,
+    color: theme.color,
+    audio: theme.audio,
+    hashtags: theme.hashtags,
+    caption: data.caption
+  };
+}
+
+async function generateSpirit(apiKey) {
+  const philName = selectedPhilosopher === "auto"
+    ? pickAvoidingRecent(Object.keys(PHILOSOPHERS), getHistory().slice(0, 3).map(h => h.label))
+    : selectedPhilosopher;
+  const phil = PHILOSOPHERS[philName];
+  const recentQuotes = getHistory().map(h => h.quote);
+
+  const recentBlock = recentQuotes.length > 0
+    ? `\nDO NOT echo these recent quotes:\n${recentQuotes.map(q => `- "${q}"`).join("\n")}\n`
+    : "";
+
+  const userPrompt = `Write a single original motivational quote in the SPIRIT and STYLE of ${philName}.
+
+ABOUT ${philName.toUpperCase()}:
+Style: ${phil.style}
+Themes they explored: ${phil.themes}
+
+CRITICAL RULES:
+- This is an ORIGINAL quote inspired by their voice — NOT something they actually said
+- It must SOUND like them but be genuinely new
+- Don't paraphrase a known quote of theirs
+- Capture their tone, rhythm, philosophical depth
+- Keep it concise — readable in 3-5 seconds
+${recentBlock}
+
+Respond with ONLY a JSON object (no markdown, no backticks):
+{"quote":"the original quote in their style","label":"2-3 WORD LABEL like INNER STRENGTH","caption":"1-2 sentence caption explaining the wisdom in modern terms"}`;
+
+  const data = await callClaude(apiKey, userPrompt, 1.0);
+  return {
+    quote: data.quote,
+    attribution: `In the spirit of ${philName}`,
+    label: data.label,
+    theme: philName,
+    color: phil.color,
+    audio: phil.audio,
+    hashtags: ["#" + philName.replace(/\s+/g, ""), "#Philosophy", "#Wisdom", "#DeepThoughts", "#Inspired"],
+    caption: data.caption
+  };
+}
+
+async function callClaude(apiKey, userPrompt, temperature) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 600,
+      temperature: temperature,
+      messages: [{ role: "user", content: userPrompt }]
+    })
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { _raw: text }; }
+  const debugInfo = { status: res.status, ok: res.ok, response: data };
+  if (!res.ok) throw { message: data?.error?.message || `HTTP ${res.status}`, debug: debugInfo };
+  let textOut = "";
+  if (Array.isArray(data?.content)) {
+    const block = data.content.find(b => b?.type === "text");
+    textOut = block?.text || "";
+  }
+  if (!textOut) throw { message: "No text in API response.", debug: debugInfo };
+  let clean = textOut.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
+  const a = clean.indexOf("{"), b = clean.lastIndexOf("}");
+  if (a !== -1 && b > a) clean = clean.slice(a, b + 1);
+  const parsed = JSON.parse(clean);
+  if (!parsed.quote) throw { message: "No quote in response.", debug: debugInfo };
+  return parsed;
+}
+
+// ========================================
+// RENDER
+// ========================================
+function renderPost(p) {
+  setAccent(p.color);
+  $("quoteText").textContent = `"${p.quote}"`;
+
+  if (p.attribution) {
+    $("attributionText").textContent = `— ${p.attribution}`;
+    $("attributionText").classList.remove("hidden");
+  } else {
+    $("attributionText").classList.add("hidden");
+  }
+
+  $("labelText").textContent = p.label;
+  $("themeText").textContent = p.theme;
+  $("metaLabel").textContent = mode === "verified" ? "SOURCE" : (mode === "spirit" ? "PHILOSOPHER" : "THEME");
+  $("audioText").textContent = p.audio;
+  $("captionText").textContent = p.caption;
+  $("tagsRow").innerHTML = p.hashtags.map(t => `<span class="tag">${t}</span>`).join("");
+
+  $("emptyState").classList.add("hidden");
+  $("output").classList.remove("hidden");
+  drawCanvas(p);
+}
+
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(" ");
+  const lines = [];
+  let line = "";
+  for (const w of words) {
+    const test = line + w + " ";
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line.trim());
+      line = w + " ";
+    } else line = test;
+  }
+  if (line.trim()) lines.push(line.trim());
+  return lines;
+}
+
+function drawCanvas(p) {
+  const canvas = $("canvas");
+  const ctx = canvas.getContext("2d");
+  const S = 1080;
+  canvas.width = S; canvas.height = S;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, S, S);
+
+  for (let i = 0; i < 6000; i++) {
+    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.012})`;
+    ctx.fillRect(Math.random() * S, Math.random() * S, 1, 1);
+  }
+
+  const pad = 90, maxW = S - pad * 2;
+  const accent = p.color || "#C8A96E";
+  const quote = `"${p.quote}"`;
+
+  // Reserve space for attribution if present
+  const hasAttribution = !!p.attribution;
+  const reservedBottom = hasAttribution ? 180 : 100;
+
+  let fs = 68;
+  ctx.textAlign = "center";
+  while (fs > 28) {
+    ctx.font = `bold ${fs}px Georgia, serif`;
+    const lines = wrapText(ctx, quote, maxW);
+    if (lines.length * fs * 1.5 < S - pad - reservedBottom) break;
+    fs -= 3;
+  }
+  ctx.font = `bold ${fs}px Georgia, serif`;
+  ctx.fillStyle = "#fff";
+  const lines = wrapText(ctx, quote, maxW);
+  const lh = fs * 1.5;
+  const totalH = lines.length * lh;
+  const startY = (S - totalH - (hasAttribution ? 80 : 0)) / 2 + fs * 0.5;
+  lines.forEach((l, i) => ctx.fillText(l, S / 2, startY + i * lh));
+
+  // Attribution
+  if (hasAttribution) {
+    ctx.font = `italic 26px Georgia, serif`;
+    ctx.fillStyle = "#999";
+    ctx.fillText(`— ${p.attribution}`, S / 2, startY + totalH + 40);
+  }
+
+  // Label at bottom
+  ctx.font = `bold 20px sans-serif`;
+  ctx.fillStyle = accent;
+  ctx.fillText((p.label || p.theme).toUpperCase(), S / 2, S - 48);
+}
+
+function downloadImage() {
+  const canvas = $("canvas");
+  const link = document.createElement("a");
+  link.download = `tiktok-${Date.now()}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+function copyCaption() {
+  if (!currentPost) return;
+  const text = `${currentPost.caption}\n\n${currentPost.hashtags.join(" ")}`;
+  navigator.clipboard.writeText(text);
+  const btn = $("copyBtn");
+  btn.textContent = "✓ COPIED";
+  btn.classList.add("copied");
+  setTimeout(() => {
+    btn.textContent = "COPY";
+    btn.classList.remove("copied");
+  }, 2000);
+}
+
+$("generateBtn").addEventListener("click", generate);
+</script>
+
+</body>
+</html>
